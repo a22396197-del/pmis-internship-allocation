@@ -30,24 +30,54 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    const { access_token } = res.data;
+    const { access_token, user_id, role, name } = res.data;
     localStorage.setItem('pm_token', access_token);
 
-    const meRes = await api.get('/auth/me');
-    setUser(meRes.data);
-    localStorage.setItem('pm_user', JSON.stringify(meRes.data));
-    return meRes.data;
+    const userObj = {
+      id: user_id,
+      email: email.toLowerCase(),
+      role: role,
+      name: name
+    };
+    setUser(userObj);
+    localStorage.setItem('pm_user', JSON.stringify(userObj));
+
+    try {
+      const meRes = await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+      setUser(meRes.data);
+      localStorage.setItem('pm_user', JSON.stringify(meRes.data));
+      return meRes.data;
+    } catch (e) {
+      return userObj;
+    }
   };
 
   const register = async (name, email, password, role) => {
     const res = await api.post('/auth/register', { name, email, password, role });
-    const { access_token } = res.data;
+    const { access_token, user_id } = res.data;
     localStorage.setItem('pm_token', access_token);
 
-    const meRes = await api.get('/auth/me');
-    setUser(meRes.data);
-    localStorage.setItem('pm_user', JSON.stringify(meRes.data));
-    return meRes.data;
+    const userObj = {
+      id: user_id,
+      email: email.toLowerCase(),
+      role: role,
+      name: name
+    };
+    setUser(userObj);
+    localStorage.setItem('pm_user', JSON.stringify(userObj));
+
+    try {
+      const meRes = await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+      setUser(meRes.data);
+      localStorage.setItem('pm_user', JSON.stringify(meRes.data));
+      return meRes.data;
+    } catch (e) {
+      return userObj;
+    }
   };
 
   const logout = () => {
