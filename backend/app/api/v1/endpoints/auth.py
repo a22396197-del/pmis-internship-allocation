@@ -21,49 +21,56 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         )
 
     # 2. Securely hash password and create user in database
-    user = User(
-        email=user_in.email.lower(),
-        hashed_password=get_password_hash(user_in.password),
-        role=user_in.role.upper()
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        user = User(
+            email=user_in.email.lower(),
+            hashed_password=get_password_hash(user_in.password),
+            role=user_in.role.upper()
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    # 3. Create initial clean profile with NO FAKE DATA
-    full_name = user_in.name.strip()
-    if user.role == "STUDENT":
-        profile = StudentProfile(
-            user_id=user.id,
-            full_name=full_name,
-            phone=user_in.phone or "",
-            education_level="",
-            field_of_study="",
-            institution_name="",
-            graduation_year=None,
-            cgpa_or_percentage=None,
-            home_city="",
-            home_state="",
-            preferred_locations=[],
-            career_interests=[],
-            industry_preferences=[],
-            extracted_skills=[],
-            bio=""
+        # 3. Create initial clean profile with NO FAKE DATA
+        full_name = user_in.name.strip()
+        if user.role == "STUDENT":
+            profile = StudentProfile(
+                user_id=user.id,
+                full_name=full_name,
+                phone=user_in.phone or "",
+                education_level="",
+                field_of_study="",
+                institution_name="",
+                graduation_year=None,
+                cgpa_or_percentage=None,
+                home_city="",
+                home_state="",
+                preferred_locations=[],
+                career_interests=[],
+                industry_preferences=[],
+                extracted_skills=[],
+                bio=""
+            )
+            db.add(profile)
+            db.commit()
+        elif user.role == "COMPANY":
+            company = CompanyProfile(
+                user_id=user.id,
+                company_name=full_name,
+                industry="",
+                website="",
+                location_city="",
+                location_state="",
+                description=""
+            )
+            db.add(company)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration database error: {str(e)}"
         )
-        db.add(profile)
-        db.commit()
-    elif user.role == "COMPANY":
-        company = CompanyProfile(
-            user_id=user.id,
-            company_name=full_name,
-            industry="",
-            website="",
-            location_city="",
-            location_state="",
-            description=""
-        )
-        db.add(company)
-        db.commit()
 
     # 4. Generate JWT access token
     token = create_access_token(subject=user.id, role=user.role)
