@@ -96,25 +96,33 @@ if os.path.exists(FRONTEND_DIST):
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
+    NO_CACHE_HEADERS = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+
     @app.get("/")
     def serve_root():
         index_file = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.exists(index_file):
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers=NO_CACHE_HEADERS)
         return {"status": "online", "message": "Frontend build not detected."}
 
     @app.get("/{full_path:path}")
     def serve_spa(full_path: str):
-        # Prevent intercepting API routes or health
-        if full_path.startswith("api/") or full_path == "health" or full_path.startswith("docs") or full_path.startswith("openapi"):
-            return {"detail": "Not Found"}
+        # Prevent intercepting API routes, assets, docs, or health
+        if full_path.startswith("api/") or full_path.startswith("assets/") or full_path == "health" or full_path.startswith("docs") or full_path.startswith("openapi"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
         target_file = os.path.join(FRONTEND_DIST, full_path)
         if os.path.isfile(target_file):
             return FileResponse(target_file)
         index_file = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.exists(index_file):
-            return FileResponse(index_file)
-        return {"detail": "Not Found"}
+            return FileResponse(index_file, headers=NO_CACHE_HEADERS)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not Found")
 else:
     @app.get("/")
     def root():
