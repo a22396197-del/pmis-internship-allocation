@@ -21,7 +21,16 @@ export const LoginPage = () => {
       else if (user.role === 'COMPANY') navigate('/company/dashboard');
       else navigate('/student/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password. Please verify your credentials.');
+      const detail = err.response?.data?.detail;
+      let errorMsg = 'Invalid email or password. Please verify your credentials.';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || JSON.stringify(detail);
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
